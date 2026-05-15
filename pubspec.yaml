@@ -6,6 +6,15 @@ repository: https://github.com/utiegbai/tickki_chat_flutter
 issue_tracker: https://github.com/utiegbai/tickki_chat_flutter/issues
 documentation: https://app.tickki.com/developers/docs
 
+# Topics surface in pub.dev search facets and on the package landing
+# page. Lowercase, hyphens allowed, max 5.
+topics:
+  - chat
+  - messaging
+  - live-chat
+  - customer-support
+  - tickki
+
 environment:
   sdk: ^3.9.2
   flutter: ">=3.16.0"
