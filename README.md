@@ -1,5 +1,8 @@
 # Tickki Chat SDK for Flutter
 
+[![pub.dev](https://img.shields.io/pub/v/tickki_chat_flutter.svg)](https://pub.dev/packages/tickki_chat_flutter)
+[![pub points](https://img.shields.io/pub/points/tickki_chat_flutter)](https://pub.dev/packages/tickki_chat_flutter/score)
+
 Embed live customer-support chat into your Flutter app. Your users talk to your agents through the Tickki inbox — through a UI you control (or a drop-in widget you don't have to build).
 
 - **Drop-in mode**: one method call opens a complete chat screen. Branding (colors, welcome text, logo) is fetched from the business's Tickki dashboard at runtime, so you never have to ship UI updates when the brand changes.
@@ -8,6 +11,12 @@ Embed live customer-support chat into your Flutter app. Your users talk to your 
 Both modes are in the same package — pick the import based on which one you want.
 
 ## Installation
+
+```sh
+flutter pub add tickki_chat_flutter
+```
+
+…or add it to `pubspec.yaml` manually:
 
 ```yaml
 dependencies:
