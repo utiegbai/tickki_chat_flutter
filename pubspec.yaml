@@ -1,0 +1,33 @@
+name: tickki_chat_flutter
+description: "Tickki Chat SDK for Flutter — embed live agent chat into your app with a drop-in widget or headless primitives."
+version: 0.1.0
+homepage: https://app.tickki.com/developers
+repository: https://github.com/utiegbai/tickki_chat_flutter
+issue_tracker: https://github.com/utiegbai/tickki_chat_flutter/issues
+documentation: https://app.tickki.com/developers/docs
+
+environment:
+  sdk: ^3.9.2
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Pure-Dart HTTP for the REST surface. We deliberately don't pull
+  # dio in — keeping transitive deps tiny is a feature for an SDK.
+  http: ^1.2.0
+  # Pusher-protocol client for the realtime subscription. The Tickki
+  # backend uses Reverb, which is wire-compatible with Pusher. The
+  # same package is what the agent app uses, so we know it works on
+  # Android + iOS today.
+  pusher_channels_flutter: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  # No assets bundled with the SDK. The drop-in widget pulls branding
+  # (colors, logo URL, welcome copy) from the GET /chat/config response
+  # at runtime, so the package itself stays asset-free.
