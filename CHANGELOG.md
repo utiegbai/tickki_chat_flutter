@@ -1,3 +1,23 @@
+## 0.1.4
+
+* **Realtime now actually works.** The previous releases shipped a
+  `pusher_channels_flutter`-based client, but that package's native
+  iOS / Android SDKs construct the WebSocket URL from a `cluster`
+  name and don't expose a `host` override — so the SDK was
+  connecting to Pusher Cloud (`ws-mt1.pusher.com`) instead of your
+  Tickki Reverb host. Net effect: agent replies only appeared after
+  the visitor closed and re-opened the chat (REST history fetch).
+
+  Replaced with a small hand-rolled Pusher-protocol client over
+  `web_socket_channel`. Connects directly to the Reverb host that
+  `GET /chat/config` returns, signs the private channel through
+  `POST /chat/broadcasting/auth`, and emits `MessageCreated`
+  payloads on `ChatSession.messages` as they arrive. Includes
+  auto-reconnect with exponential backoff capped at 30s.
+
+* Drops the `pusher_channels_flutter` dependency, replaces it with
+  `web_socket_channel ^3.0.1` (Flutter SDK-shipped dependency).
+
 ## 0.1.3
 
 * **Fix drop-in widget stuck on loading spinner after a session-scoped

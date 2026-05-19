@@ -1,6 +1,6 @@
 name: tickki_chat_flutter
 description: "Tickki Chat SDK for Flutter — embed live agent chat into your app with a drop-in widget or headless primitives."
-version: 0.1.3
+version: 0.1.4
 homepage: https://app.tickki.com/developers
 repository: https://github.com/utiegbai/tickki_chat_flutter
 issue_tracker: https://github.com/utiegbai/tickki_chat_flutter/issues
@@ -25,11 +25,16 @@ dependencies:
   # Pure-Dart HTTP for the REST surface. We deliberately don't pull
   # dio in — keeping transitive deps tiny is a feature for an SDK.
   http: ^1.2.0
-  # Pusher-protocol client for the realtime subscription. The Tickki
-  # backend uses Reverb, which is wire-compatible with Pusher. The
-  # same package is what the agent app uses, so we know it works on
-  # Android + iOS today.
-  pusher_channels_flutter: ^2.4.0
+  # WebSocket for the realtime subscription. We speak the Pusher
+  # protocol directly over `web_socket_channel` rather than via the
+  # `pusher_channels_flutter` package because that package's native
+  # iOS/Android SDKs auto-construct the WS URL from a `cluster` name
+  # and don't expose a `host` override — fine for Pusher Cloud,
+  # useless for a self-hosted Reverb at `ws.tickki.com`. Pusher's
+  # wire protocol is simple enough that a custom client is cleaner
+  # than fighting the native bridges (the Tickki agent app made the
+  # same call in its `ReverbService`).
+  web_socket_channel: ^3.0.1
   # Used to auto-detect the host app's bundle id (Android package /
   # iOS bundle identifier) at runtime so the SDK can send
   # X-Tickki-Bundle-Id without consumers having to pass it manually.
