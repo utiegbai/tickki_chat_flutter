@@ -25,3 +25,9 @@ library;
 export 'tickki_chat_flutter.dart';
 export 'src/widget/tickki_chat_widget.dart';
 export 'src/widget/tickki_chat_strings.dart';
+// Analytics widgets — the observer / scope / trackable trio that
+// auto-track screens and taps so consumers don't have to instrument
+// every widget by hand. See the README's "Analytics" section.
+export 'src/analytics/tickki_analytics_observer.dart';
+export 'src/analytics/tickki_analytics_scope.dart';
+export 'src/analytics/tickki_trackable.dart';

@@ -83,6 +83,63 @@ final history = await session.loadHistory();
 await session.dispose();
 ```
 
+## Analytics — tracking screens, taps, and custom events
+
+The SDK also has an analytics surface that feeds the same Visitor Intelligence pipeline the JS widget uses. Three integration tiers, from least to most explicit:
+
+### 1. Zero per-widget code — auto screen tracking
+
+```dart
+final tickki = TickkiChat(publishableKey: 'pk_live_…')
+  ..analytics.setVisitorId('user_8432');
+
+MaterialApp(
+  navigatorObservers: [
+    TickkiAnalyticsNavigatorObserver(analytics: tickki.analytics),
+  ],
+  ...
+)
+```
+
+Every push / replace fires a `screen_view` event with the route name. For readable labels, give your routes names: `MaterialPageRoute(settings: RouteSettings(name: 'CheckoutScreen'), builder: ...)`.
+
+### 2. One wrapper for the whole app — ambient tap capture + named taps
+
+```dart
+runApp(TickkiAnalyticsScope(
+  analytics: tickki.analytics,
+  child: const MyApp(),
+));
+```
+
+`TickkiAnalyticsScope` captures every tap and records it as a coordinate-tagged `tap` event — a free heatmap, no per-widget code.
+
+For richer events on specific buttons, wrap the child with `TickkiTrackable`:
+
+```dart
+TickkiTrackable(
+  name: 'add_to_cart_btn',          // stable id, used as element_key
+  label: 'Add to cart',              // human-readable, used as element_label
+  child: ElevatedButton(onPressed: ..., child: const Text('Add to cart')),
+)
+```
+
+For sensitive subtrees (password fields, payment forms), wrap with `TickkiIgnore`:
+
+```dart
+TickkiIgnore(child: PasswordField(...))
+```
+
+### 3. Manual — full control
+
+```dart
+tickki.analytics.track('add_to_cart', properties: {'sku': 'abc-123', 'price_cents': 1999});
+tickki.analytics.trackScreen('CheckoutScreen');
+tickki.analytics.trackTap(label: 'Buy now', key: 'buy_btn');
+```
+
+Events buffer in memory and flush every 5 seconds (or sooner if the buffer hits 20 events). Network failures re-queue the batch so brief outages don't drop events.
+
 ## Authentication
 
 The SDK needs a **publishable** API key (`pk_live_*`). A business owner mints one from the Tickki dashboard at `Settings → Developer` and pastes it into your build configuration. Keys are safe to embed in client code; you can restrict them to specific origins or bundle ids at creation time.

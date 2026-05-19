@@ -1,10 +1,12 @@
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'analytics/tickki_analytics.dart';
 import 'api/api_client.dart';
 import 'chat_session.dart';
 import 'models/models.dart';
 
+export 'analytics/tickki_analytics.dart' show TickkiAnalytics;
 export 'chat_session.dart' show ChatSession;
 
 /// Entry point for the Tickki Chat SDK.
@@ -52,6 +54,15 @@ class TickkiChat {
   final String? bundleId;
 
   final TickkiApiClient _api;
+
+  /// Lazy-initialised analytics surface. The first access boots the
+  /// buffer + flush timer; subsequent accesses reuse the instance.
+  /// Set the visitor id with [TickkiAnalytics.setVisitorId] before
+  /// tracking — events fire before chat opens, so analytics doesn't
+  /// piggy-back on the chat session lifecycle.
+  TickkiAnalytics? _analytics;
+  TickkiAnalytics get analytics =>
+      _analytics ??= TickkiAnalytics(api: _api);
 
   /// One-shot lookup of the host app's package identifier. Wrapped in
   /// a try/catch + timeout because:
@@ -123,7 +134,12 @@ class TickkiChat {
     return ChatSession(api: _api, details: details);
   }
 
-  /// Release the HTTP client. Call from your `dispose`/`tearDown`
-  /// path when the app is shutting down (rarely needed in production).
-  void close() => _api.close();
+  /// Release the HTTP client + tear down any analytics buffer. Call
+  /// from your `dispose`/`tearDown` path when the app is shutting
+  /// down (rarely needed in production).
+  void close() {
+    _analytics?.dispose();
+    _analytics = null;
+    _api.close();
+  }
 }

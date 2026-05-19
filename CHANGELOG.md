@@ -1,3 +1,61 @@
+## 0.2.0
+
+* **Analytics surface added.** SDK consumers can now track screens,
+  taps, and custom events that flow into the same Visitor Intelligence
+  pipeline the JS widget feeds — so intent scoring, AI summaries, and
+  the agent dashboard's "what is this visitor doing right now" picture
+  light up for mobile traffic too.
+
+  Three integration tiers, escalating from least to most explicit:
+
+  1. **Auto screen tracking** — one line on `MaterialApp`:
+     ```dart
+     navigatorObservers: [
+       TickkiAnalyticsNavigatorObserver(analytics: tickki.analytics),
+     ],
+     ```
+     Every push / replace fires a `screen_view` event with the route
+     name. Give routes names (`RouteSettings(name: 'CheckoutScreen')`)
+     for readable analytics labels.
+
+  2. **Ambient tap capture + opt-in named taps** — wrap once at the
+     root:
+     ```dart
+     TickkiAnalyticsScope(analytics: tickki.analytics, child: MyApp())
+     ```
+     Captures every tap as a coordinate-tagged `tap` event without per-
+     widget code. For richer events on specific buttons, wrap the child
+     with `TickkiTrackable(name: 'add_to_cart_btn', label: 'Add to cart', child: ...)`.
+     Wrap sensitive subtrees (password forms, payment fields) in
+     `TickkiIgnore(child: ...)` to opt out of ambient capture.
+
+  3. **Manual** — full control:
+     ```dart
+     tickki.analytics.setVisitorId('user_8432');
+     tickki.analytics.track('add_to_cart', properties: {'sku': 'abc'});
+     tickki.analytics.trackScreen('CheckoutScreen');
+     tickki.analytics.trackTap(label: 'Buy now', key: 'buy_btn');
+     ```
+
+  Events are buffered in-memory and flushed every 5 seconds (or sooner
+  when the buffer hits 20 events). A network failure re-queues the
+  batch at the head of the buffer so a brief outage doesn't drop
+  events.
+
+* **Setup requirement**: call `tickki.analytics.setVisitorId('...')`
+  before tracking. Events without a visitor id are silently dropped —
+  we won't infer an anonymous id, because the consumer's own user-id
+  story is the right source of truth.
+
+* **What we deliberately do NOT track**: text input values (privacy
+  poison, near-zero analytic value), scroll position (low signal on
+  mobile), long-press / drag gestures (skipped in this release; let
+  us know if you need them).
+
+* No breaking changes to the existing chat surface — the analytics
+  additions are net-new. Existing `TickkiChat` / `ChatSession` /
+  `TickkiChatWidget` calls behave identically.
+
 ## 0.1.4
 
 * **Realtime now actually works.** The previous releases shipped a

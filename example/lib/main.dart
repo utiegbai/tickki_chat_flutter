@@ -18,39 +18,56 @@ const _publishableKey = 'pk_live_PASTE_YOUR_KEY_HERE';
 const _visitorId = 'demo-visitor-001';
 const _baseUrl = 'https://app.tickki.com';
 
-class ExampleApp extends StatelessWidget {
+class ExampleApp extends StatefulWidget {
   const ExampleApp({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tickki Chat SDK Example',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF4F46E5),
-      ),
-      home: const _Home(),
-    );
-  }
+  State<ExampleApp> createState() => _ExampleAppState();
 }
 
-class _Home extends StatefulWidget {
-  const _Home();
-  @override
-  State<_Home> createState() => _HomeState();
-}
-
-class _HomeState extends State<_Home> {
+class _ExampleAppState extends State<ExampleApp> {
+  // Single TickkiChat for the whole app. The drop-in widget, the
+  // headless demo screen, and the analytics surface all share it.
   late final TickkiChat _client = TickkiChat(
     publishableKey: _publishableKey,
     baseUrl: _baseUrl,
-  );
+  )..analytics.setVisitorId(_visitorId);
 
   @override
   void dispose() {
     _client.close();
     super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) {
+    // TickkiAnalyticsScope wraps the app once. Its job:
+    //   1. Make `tickki.analytics` reachable from TickkiTrackable
+    //      widgets anywhere below.
+    //   2. Capture ambient taps (coordinates + screen) so we get a
+    //      heatmap-style stream without per-button instrumentation.
+    //      Disable with `captureTaps: false` for fully manual tracking.
+    return TickkiAnalyticsScope(
+      analytics: _client.analytics,
+      child: MaterialApp(
+        title: 'Tickki Chat SDK Example',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: const Color(0xFF4F46E5),
+        ),
+        // The navigator observer fires a `screen_view` for every push /
+        // replace. Give your routes names for readable screen labels.
+        navigatorObservers: [
+          TickkiAnalyticsNavigatorObserver(analytics: _client.analytics),
+        ],
+        home: _Home(client: _client),
+      ),
+    );
+  }
+}
+
+class _Home extends StatelessWidget {
+  const _Home({required this.client});
+  final TickkiChat client;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +81,7 @@ class _HomeState extends State<_Home> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FilledButton(
-                onPressed: _openDropIn,
+                onPressed: () => _openDropIn(context),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -72,11 +89,46 @@ class _HomeState extends State<_Home> {
               ),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: _openHeadless,
+                onPressed: () => _openHeadless(context),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: const Text('Open headless demo'),
+              ),
+              const SizedBox(height: 12),
+              // Tier-3 analytics: explicit named tap on a button you
+              // care about. Wrap the child with TickkiTrackable, give
+              // it a stable name + visible label, and the SDK fires a
+              // rich `tap` event when it's tapped. The button below
+              // does no real work — it's purely to demo the event.
+              TickkiTrackable(
+                name: 'demo_track_event_btn',
+                label: 'Fire a custom event',
+                properties: const {'demo': true},
+                child: OutlinedButton(
+                  onPressed: () {
+                    // Tier-3 manual track call — for events that don't
+                    // fit screen-view or tap shapes.
+                    client.analytics.track(
+                      'add_to_cart',
+                      properties: const {
+                        'product_id': 'sku-123',
+                        'price_cents': 1999,
+                      },
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Fired tap + add_to_cart events. They\'ll appear in the Tickki analytics within ~5s.',
+                        ),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Fire add_to_cart event'),
+                ),
               ),
               const SizedBox(height: 24),
               Text(
@@ -92,18 +144,22 @@ class _HomeState extends State<_Home> {
     );
   }
 
-  void _openDropIn() {
+  void _openDropIn(BuildContext context) {
     TickkiChatWidget.show(
       context,
-      client: _client,
+      client: client,
       visitorId: _visitorId,
     );
   }
 
-  void _openHeadless() {
+  void _openHeadless(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => _HeadlessChatScreen(client: _client),
+        // Naming the route makes the screen_view event readable in
+        // the analytics dashboard ("HeadlessChatScreen" vs. an
+        // auto-derived runtime type).
+        settings: const RouteSettings(name: 'HeadlessChatScreen'),
+        builder: (_) => _HeadlessChatScreen(client: client),
       ),
     );
   }
