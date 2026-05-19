@@ -1,3 +1,19 @@
+## 0.2.1
+
+* **Drop-in widget topbar redesign.** Replaces the plain "Chat with
+  us" AppBar with a standard chat-product header:
+  - Business logo (from `branding.logo_url`) or a generated initial
+    avatar on the left.
+  - Business name as the title.
+  - Online / offline indicator with a green-dot status pip directly
+    below the name (was a separate strip before).
+  - Round translucent close (×) button on the right.
+  - Colour comes from `branding.primary_color` so it stays on-brand.
+
+  All behaviour preserved — same SafeArea, same close-on-pop, same
+  pre-chat / loading / error states. The `strings.title` override
+  still applies when no business name is available.
+
 ## 0.2.0
 
 * **Analytics surface added.** SDK consumers can now track screens,

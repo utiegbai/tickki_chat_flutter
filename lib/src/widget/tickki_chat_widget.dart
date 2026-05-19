@@ -288,28 +288,18 @@ class _TickkiChatWidgetState extends State<TickkiChatWidget>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        title: Text(widget.strings.title),
-        elevation: 0,
-        bottom: _config == null
-            ? null
-            : PreferredSize(
-                preferredSize: const Size.fromHeight(24),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 6),
-                  color: primary,
-                  alignment: Alignment.center,
-                  child: Text(
-                    _config!.agentsOnline > 0
-                        ? widget.strings.onlineLabel
-                        : widget.strings.offlineLabel,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ),
-              ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(72),
+        child: _ChatTopBar(
+          primary: primary,
+          businessName: _config?.business.name,
+          logoUrl: _config?.branding.logoUrl,
+          agentsOnline: _config?.agentsOnline ?? 0,
+          onlineLabel: widget.strings.onlineLabel,
+          offlineLabel: widget.strings.offlineLabel,
+          fallbackTitle: widget.strings.title,
+          onClose: () => Navigator.of(context).maybePop(),
+        ),
       ),
       body: _buildBody(primary, accent, theme),
     );
@@ -584,6 +574,170 @@ class _MessageBubble extends StatelessWidget {
         child: Text(
           message.content,
           style: TextStyle(color: fg, fontSize: 14, height: 1.35),
+        ),
+      ),
+    );
+  }
+}
+
+/// Standard chat header: business logo / avatar on the left, business
+/// name + online indicator in the middle, close button on the right.
+/// Renders against the business's primary brand color (from
+/// `GET /chat/config`'s `branding.primary_color`) with a soft bottom
+/// border so it reads as a navigation bar, not a banner.
+class _ChatTopBar extends StatelessWidget {
+  const _ChatTopBar({
+    required this.primary,
+    required this.agentsOnline,
+    required this.onlineLabel,
+    required this.offlineLabel,
+    required this.fallbackTitle,
+    required this.onClose,
+    this.businessName,
+    this.logoUrl,
+  });
+
+  final Color primary;
+  final String? businessName;
+  final String? logoUrl;
+  final int agentsOnline;
+  final String onlineLabel;
+  final String offlineLabel;
+  final String fallbackTitle;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOnline = agentsOnline > 0;
+    final title = (businessName ?? '').isNotEmpty ? businessName! : fallbackTitle;
+
+    return Material(
+      color: primary,
+      elevation: 0,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 10),
+          child: Row(
+            children: [
+              _AvatarLogo(name: title, logoUrl: logoUrl),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isOnline
+                                ? const Color(0xFF22C55E)
+                                : Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isOnline ? onlineLabel : offlineLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Round translucent close button — keeps the brand color
+              // the dominant visual element instead of a stark white X.
+              Material(
+                color: Colors.white.withValues(alpha: 0.16),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onClose,
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.close, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Logo avatar with a sensible fallback. Uses NetworkImage when a
+/// branding logo URL is set on the business, otherwise renders the
+/// first letter of the business name on a translucent disc — so a
+/// business without a logo still gets a recognisable mark instead of
+/// an empty circle.
+class _AvatarLogo extends StatelessWidget {
+  const _AvatarLogo({required this.name, this.logoUrl});
+  final String name;
+  final String? logoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty
+        ? '?'
+        : name.trim().substring(0, 1).toUpperCase();
+
+    if (logoUrl != null && logoUrl!.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          logoUrl!,
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
+          // Same fallback as the no-URL case if the image fails to
+          // load — better than a broken-image glyph in the topbar.
+          errorBuilder: (_, __, ___) => _fallback(initial),
+        ),
+      );
+    }
+    return _fallback(initial);
+  }
+
+  Widget _fallback(String initial) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
