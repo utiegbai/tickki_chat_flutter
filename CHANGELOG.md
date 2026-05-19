@@ -1,3 +1,21 @@
+## 0.1.3
+
+* **Fix drop-in widget stuck on loading spinner after a session-scoped
+  request failed.** When `startSession` succeeded but a subsequent
+  `loadHistory`/realtime call threw, the widget's catch path set
+  `_error` but never cleared `_loading`, and the build method
+  short-circuited on the loading state before reading `_error`. The
+  net effect was an infinite spinner instead of the diagnosable error
+  screen. Now the catch path resets `_loading`, the error guard no
+  longer requires `_session == null`, and the bootstrap entry-point
+  wipes prior state so the "Try again" button gets a clean slate.
+
+  This downstream-bug surfaced after a backend issue where
+  `resolveSession()` queried the wrong column on `chat_sdk_sessions`
+  and returned 401 for SDK-issued tokens. The backend is fixed
+  separately; this SDK change ensures any *future* server-side
+  failure shows a real error rather than an unrecoverable spinner.
+
 ## 0.1.2
 
 * **Fix endless loading**: cap the bundle-id auto-detect at 2 seconds.

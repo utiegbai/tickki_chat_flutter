@@ -99,6 +99,21 @@ class _TickkiChatWidgetState extends State<TickkiChatWidget>
   /// form or start the session straight away. We keep this state in
   /// the widget itself because the drop-in needs to be self-contained.
   Future<void> _bootstrap() async {
+    // Reset state so the "Try again" button gets a clean slate — leaked
+    // sessions or stale errors from a prior attempt would otherwise
+    // leak into the next try.
+    final priorSession = _session;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _session = null;
+      _messages.clear();
+    });
+    if (priorSession != null) {
+      // Best-effort cleanup of the previous failed attempt.
+      // ignore: discarded_futures
+      priorSession.dispose();
+    }
     try {
       final config = await widget.client.fetchConfig();
       if (!mounted) return;
@@ -170,12 +185,18 @@ class _TickkiChatWidgetState extends State<TickkiChatWidget>
     } on TickkiChatException catch (e) {
       if (!mounted) return;
       setState(() {
+        // Clear `_loading` too — without this the build method
+        // short-circuits on `_loading` before it ever reads `_error`,
+        // leaving the spinner visible forever even though startSession
+        // or loadHistory threw. Same applies to the catch-all below.
+        _loading = false;
         _starting = false;
         _error = _humanizeError(e);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
+        _loading = false;
         _starting = false;
         _error = widget.strings.errorGeneric;
       });
@@ -298,7 +319,12 @@ class _TickkiChatWidgetState extends State<TickkiChatWidget>
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_error != null && _session == null) {
+    // `_error` is only ever set by the bootstrap path — mid-chat
+    // failures use a snackbar, not setState. So showing the error
+    // screen whenever `_error` is set is correct, even if `_session`
+    // is non-null (which happens when startSession succeeded but
+    // loadHistory failed afterwards).
+    if (_error != null) {
       return _buildErrorState(primary);
     }
     if (_showingPreChat) {
