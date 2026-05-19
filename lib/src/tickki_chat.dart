@@ -53,15 +53,23 @@ class TickkiChat {
 
   final TickkiApiClient _api;
 
-  /// One-shot lookup of the host app's package identifier. Wrapped
-  /// in a try/catch because on unsupported platforms (or rare init
-  /// failures) `PackageInfo.fromPlatform()` throws — and a bundle-id
-  /// lookup failure must never break the actual chat call.
+  /// One-shot lookup of the host app's package identifier. Wrapped in
+  /// a try/catch + timeout because:
+  ///   1. On unsupported platforms `PackageInfo.fromPlatform()` throws.
+  ///   2. If `TickkiChat()` is constructed before
+  ///      `WidgetsFlutterBinding.ensureInitialized()` runs (common when
+  ///      the SDK is created as a top-level final), the platform
+  ///      channel call may hang indefinitely. We cap at 2 seconds and
+  ///      proceed with a null bundle id so the chat call still goes
+  ///      through — the consumer's allow-list check on the backend
+  ///      will fail loudly with `origin_not_allowed`, which is
+  ///      diagnosable, rather than silently spinning forever.
   static Future<String?> _autoDetectBundleId() async {
     try {
-      final info = await PackageInfo.fromPlatform();
+      final info = await PackageInfo.fromPlatform()
+          .timeout(const Duration(seconds: 2));
       final id = info.packageName;
-      return (id.isEmpty) ? null : id;
+      return id.isEmpty ? null : id;
     } catch (_) {
       return null;
     }

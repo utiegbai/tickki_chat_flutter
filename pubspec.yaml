@@ -1,6 +1,6 @@
 name: tickki_chat_flutter
 description: "Tickki Chat SDK for Flutter — embed live agent chat into your app with a drop-in widget or headless primitives."
-version: 0.1.1
+version: 0.1.2
 homepage: https://app.tickki.com/developers
 repository: https://github.com/utiegbai/tickki_chat_flutter
 issue_tracker: https://github.com/utiegbai/tickki_chat_flutter/issues

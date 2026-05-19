@@ -1,3 +1,15 @@
+## 0.1.2
+
+* **Fix endless loading**: cap the bundle-id auto-detect at 2 seconds.
+  When `TickkiChat()` was constructed before
+  `WidgetsFlutterBinding.ensureInitialized()` ran (e.g. as a top-level
+  `final` outside `main()`), `PackageInfo.fromPlatform()` could hang
+  indefinitely on the platform channel and the first REST call would
+  block waiting for it. We now time out the lookup and fall back to a
+  null bundle id — if the request then fails the key allow-list, the
+  consumer gets a fast, diagnosable `origin_not_allowed` error instead
+  of an infinite spinner.
+
 ## 0.1.1
 
 * Auto-detect the host app's bundle id via `package_info_plus` and send
