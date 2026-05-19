@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'api/api_client.dart';
 import 'chat_session.dart';
@@ -28,6 +29,11 @@ class TickkiChat {
           publishableKey: publishableKey,
           baseUrl: baseUrl,
           bundleId: bundleId,
+          // When no explicit bundleId was passed, kick off a lookup
+          // via package_info_plus. The ApiClient awaits this Future
+          // on the first request and caches the result; the consumer
+          // never sees the async detail.
+          bundleIdFuture: bundleId == null ? _autoDetectBundleId() : null,
           httpClient: httpClient,
         );
 
@@ -38,12 +44,28 @@ class TickkiChat {
   /// override for self-hosted deployments or local development.
   final String baseUrl;
 
-  /// Bundle id / package name. When set, sent as `X-Tickki-Bundle-Id`
-  /// so the backend can match against the key's allow-list. Recommend
-  /// pulling this from `package_info_plus` at app start.
+  /// Optional override for the bundle id sent as `X-Tickki-Bundle-Id`.
+  /// When null (the default), the SDK auto-detects it via
+  /// `package_info_plus` so the consumer doesn't have to wire this
+  /// up themselves — `flutter pub add tickki_chat_flutter` and your
+  /// app's bundle id is already on the wire.
   final String? bundleId;
 
   final TickkiApiClient _api;
+
+  /// One-shot lookup of the host app's package identifier. Wrapped
+  /// in a try/catch because on unsupported platforms (or rare init
+  /// failures) `PackageInfo.fromPlatform()` throws — and a bundle-id
+  /// lookup failure must never break the actual chat call.
+  static Future<String?> _autoDetectBundleId() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final id = info.packageName;
+      return (id.isEmpty) ? null : id;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Direct access to the underlying API client. Use this when you
   /// need to call something the SDK doesn't surface a typed method for

@@ -1,6 +1,6 @@
 name: tickki_chat_flutter
 description: "Tickki Chat SDK for Flutter — embed live agent chat into your app with a drop-in widget or headless primitives."
-version: 0.1.0
+version: 0.1.1
 homepage: https://app.tickki.com/developers
 repository: https://github.com/utiegbai/tickki_chat_flutter
 issue_tracker: https://github.com/utiegbai/tickki_chat_flutter/issues
@@ -30,6 +30,11 @@ dependencies:
   # same package is what the agent app uses, so we know it works on
   # Android + iOS today.
   pusher_channels_flutter: ^2.4.0
+  # Used to auto-detect the host app's bundle id (Android package /
+  # iOS bundle identifier) at runtime so the SDK can send
+  # X-Tickki-Bundle-Id without consumers having to pass it manually.
+  # If they pass `bundleId:` explicitly we skip the lookup.
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:

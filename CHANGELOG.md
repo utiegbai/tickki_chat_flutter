@@ -1,3 +1,17 @@
+## 0.1.1
+
+* Auto-detect the host app's bundle id via `package_info_plus` and send
+  it as `X-Tickki-Bundle-Id` on every request. Consumers no longer need
+  to pass `bundleId:` manually when their publishable key has an
+  allow-list — the SDK reads the Android `applicationId` / iOS
+  `CFBundleIdentifier` at runtime. Passing `bundleId:` explicitly still
+  works as an override (useful for tests or when you want to forge a
+  specific identifier).
+* Fixes a confusing "origin_not_allowed" failure first-time integrators
+  hit when they followed the docs literally — the example app didn't
+  pass `bundleId:` so the header was never sent and the allow-list
+  rejected the request.
+
 ## 0.1.0
 
 * Initial release.

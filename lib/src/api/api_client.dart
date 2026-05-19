@@ -19,10 +19,16 @@ class TickkiApiClient {
   TickkiApiClient({
     required this.publishableKey,
     required this.baseUrl,
-    this.bundleId,
+    String? bundleId,
+    Future<String?>? bundleIdFuture,
     http.Client? httpClient,
   })  : _http = httpClient ?? http.Client(),
-        _ownsHttp = httpClient == null;
+        _ownsHttp = httpClient == null,
+        // The initializer list needs the local `bundleId` param for
+        // the conditional below, so we can't use `this.bundleId` here.
+        // ignore: prefer_initializing_formals
+        bundleId = bundleId,
+        _bundleIdFuture = bundleId != null ? null : bundleIdFuture;
 
   /// `pk_live_*` key minted from the Tickki dashboard.
   final String publishableKey;
@@ -33,10 +39,15 @@ class TickkiApiClient {
   final String baseUrl;
 
   /// Sent as `X-Tickki-Bundle-Id` so the backend can match against the
-  /// key's allow-list. For Flutter you'd typically pass your Android
-  /// `applicationId` or iOS bundle identifier (look them up at runtime
-  /// with `package_info_plus` and pass in).
-  final String? bundleId;
+  /// key's allow-list. When the consumer passes an explicit value to
+  /// [TickkiChat], we use it directly. Otherwise [TickkiChat] kicks off
+  /// a `package_info_plus` lookup and feeds the result here on first
+  /// request, transparently to the consumer.
+  String? bundleId;
+
+  /// Pending async resolution of the bundle id. Set when no explicit
+  /// value was passed; cleared after the first request awaits it.
+  Future<String?>? _bundleIdFuture;
 
   final http.Client _http;
   final bool _ownsHttp;
@@ -48,6 +59,7 @@ class TickkiApiClient {
     Map<String, String>? query,
     String? sessionToken,
   }) async {
+    await _ensureBundleIdResolved();
     final uri = _buildUri(path, query);
     final res = await _http.get(uri, headers: _headers(sessionToken: sessionToken));
     return _decode(res);
@@ -58,6 +70,7 @@ class TickkiApiClient {
     Map<String, dynamic>? body,
     String? sessionToken,
   }) async {
+    await _ensureBundleIdResolved();
     final uri = _buildUri(path, null);
     final res = await _http.post(
       uri,
@@ -77,6 +90,7 @@ class TickkiApiClient {
     Map<String, String>? fields,
     String? sessionToken,
   }) async {
+    await _ensureBundleIdResolved();
     final req = http.MultipartRequest('POST', _buildUri(path, null));
     req.headers.addAll(_headers(sessionToken: sessionToken));
     if (fields != null) req.fields.addAll(fields);
@@ -84,6 +98,22 @@ class TickkiApiClient {
     final streamed = await _http.send(req);
     final res = await http.Response.fromStream(streamed);
     return _decode(res);
+  }
+
+  /// Awaits the pending bundle-id lookup on the first request, then
+  /// drops the future so subsequent requests are a no-op. Swallowing
+  /// errors is intentional — a failed package_info lookup must not
+  /// poison the actual REST call.
+  Future<void> _ensureBundleIdResolved() async {
+    if (bundleId != null) return;
+    final f = _bundleIdFuture;
+    if (f == null) return;
+    _bundleIdFuture = null;
+    try {
+      bundleId = await f;
+    } catch (_) {
+      bundleId = null;
+    }
   }
 
   void close() {
@@ -107,12 +137,13 @@ class TickkiApiClient {
   }
 
   Map<String, String> _headers({String? sessionToken, bool json = false}) {
+    final id = bundleId;
     return {
       'Authorization': 'Bearer $publishableKey',
       'Accept': 'application/json',
       if (json) 'Content-Type': 'application/json',
       if (sessionToken != null) 'X-Tickki-Session': sessionToken,
-      if (bundleId != null) 'X-Tickki-Bundle-Id': bundleId!,
+      if (id != null && id.isNotEmpty) 'X-Tickki-Bundle-Id': id,
     };
   }
 
